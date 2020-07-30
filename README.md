@@ -7,7 +7,7 @@ The CSV that will be used by the bot (e.g. `mode = lawn` will use `lawn.csv`)
 
 ## How to run
 ####Executable
-`Run botharvester.exe`
+`Run formharvester.exe`
 
 ####Python
 `pip install -r requirements.txt`
