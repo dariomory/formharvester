@@ -93,7 +93,7 @@ class Bot(SeleniumBot):
         return list(radio_divs)
 
     def check_calculation_captcha(self):
-        match = re.findall(r'(\d+)\s(\+|-)\s(\d+)\s=?', self.driver.page_source)
+        match = re.findall(r'(\d+)\s(\+|-)\s(\d+)(\s=)?', self.driver.page_source)
         if match:
             match = match[0]
             no1 = int(match[0])
