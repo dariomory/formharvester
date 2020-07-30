@@ -1,3 +1,9 @@
-[credentials]
-username = username
-password = password
+[settings]
+mode = lawn
+max_google_pages = 2
+skip_ads = False
+
+# Dev settings (disable both)
+[dev]
+enabled = True
+debug_form = True

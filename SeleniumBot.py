@@ -475,6 +475,8 @@ class SeleniumBot:
             if screenshot:
                 self.save_screenshot(f'{filename}.png')
 
+            output += str(self.driver.current_url) + '\n\n'
+
             if error:
                 output += f'{error}\n\n'
 
@@ -488,5 +490,11 @@ class SeleniumBot:
 
         except Exception as e:
             print(e)
+
+    def highlight(self, element,
+                  css=False):
+        if css:
+            element = self.css(element)
+        self.driver.execute_script("arguments[0].style.border='6px groove green'", element)
 
 # dario@mory.dev :)
