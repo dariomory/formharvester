@@ -1,5 +1,4 @@
 from urllib.parse import urljoin
-
 from selenium import webdriver
 from SeleniumBot import SeleniumBot
 import traceback
@@ -12,8 +11,8 @@ import threading
 import configparser
 import csv
 import platform
-
-from utils import filter_scraped_links, get_root_url, EMAIL_RGX
+from utils import filter_scraped_links, EMAIL_RGX
+from dbc_api_python3.deathbycaptcha import SocketClient, AccessDeniedException
 
 
 class Bot(SeleniumBot):
@@ -22,8 +21,7 @@ class Bot(SeleniumBot):
     GOOGLE_NEXT = '#pnnext'
 
     # xPath
-
-    # DATA_DIR = r'User Data'
+    AD_XPATH = './ancestor::*[contains(@class, "ads")]'  # node
 
     @staticmethod
     def clean_text(text):
@@ -51,9 +49,17 @@ class Bot(SeleniumBot):
             scraped_links = []
             for _ in range(self.max_google_pages):
                 # Scrape links and go to next page
-                scraped_links.extend(
-                    self.css(self.GOOGLE_LINKS, attr='href', getall=True)
-                )
+                if self.skip_ads:
+                    no_ads = []
+                    els = self.css(self.GOOGLE_LINKS, getall=True)
+                    for el in els:
+                        if self.xpath(self.AD_XPATH, node=el):
+                            continue
+                        else:
+                            no_ads.append(el.get_attribute('href'))
+                    scraped_links.extend(no_ads)
+                else:
+                    scraped_links.extend(self.css(self.GOOGLE_LINKS, attr='href', getall=True))
                 self.click(self.GOOGLE_NEXT, css=True)
             # Process scraped links
             scraped_links = filter_scraped_links(self.keywords, scraped_links)
@@ -93,7 +99,7 @@ class Bot(SeleniumBot):
         return list(radio_divs)
 
     def check_calculation_captcha(self):
-        match = re.findall(r'(\d+)\s(\+|-)\s(\d+)(\s=)?', self.driver.page_source)
+        match = re.findall(r'(\d+)\s([+\-*])\s(\d+)(\s=)?', self.driver.page_source)
         if match:
             match = match[0]
             no1 = int(match[0])
@@ -101,8 +107,10 @@ class Bot(SeleniumBot):
             no2 = int(match[2])
             if op == '+':
                 return str(no1 + no2)
-            if op == '-':
-                return str(no1 + no2)
+            elif op == '-':
+                return str(no1 - no2)
+            elif op == '*':
+                return str(no1 * no2)
 
     def check_and_fill(self, element, field_type=None):
         if field_type == 'number':
@@ -125,6 +133,8 @@ class Bot(SeleniumBot):
             self.clean_text(ancestor),
         ]
 
+        element.clear()
+
         for field in fields:
             if 'email' in field:
                 element.send_keys(
@@ -136,12 +146,16 @@ class Bot(SeleniumBot):
                 if calc_res:
                     element.send_keys(calc_res)
                     return True
+                captcha_text = self.check_solve_captchas(image=True)
+                if captcha_text:
+                    element.send_keys(captcha_text)
+                    return True
             elif 'phone' in field:
                 element.send_keys(
                     self.details['phone']
                 )
                 return True
-            elif bool(re.findall(r'(location)', field)):
+            elif bool(re.findall(r'(location|address)', field)):
                 element.send_keys(
                     self.details['location']
                 )
@@ -248,6 +262,20 @@ class Bot(SeleniumBot):
 
         return None
 
+    def submit_button(self, btn):
+        try:
+            self.click(btn)
+        except:
+            try:
+                btn.click()
+            except:
+                try:
+                    form = self.css('form')
+                    if form:
+                        self.script('arguments[0].submit();', form)
+                except:
+                    return False
+
     def cms_check(self):
         existing = []
         existing.extend(
@@ -334,26 +362,22 @@ class Bot(SeleniumBot):
             # Sleep
             time.sleep(3)
 
+            captcha_solved = self.check_solve_captchas(recaptcha=True)
+
             # Submit
             btn = self.find_submit_button()
             if btn and not self.DEBUG:
-                try:
-                    self.click(btn)
-                except:
-                    try:
-                        btn.click()
-                    except:
-                        try:
-                            form = self.css('form')
-                            if form:
-                                self.script('arguments[0].submit();', form)
-                        except:
-                            return False
+                self.submit_button(btn)
+
+                if not captcha_solved:
+                    captcha_solved = self.check_solve_captchas(recaptcha=True)
+                    if captcha_solved:
+                        self.submit_button(btn)
+
                 self.log_website(url)
             elif btn and self.DEBUG:
                 self.highlight(btn)
                 self.log_website(url)
-                input('END')
 
             time.sleep(3)
             return True
@@ -435,6 +459,13 @@ class Bot(SeleniumBot):
         self.DEV_SETTINGS = config.getboolean('dev', 'enabled')
         self.DEBUG = config.getboolean('dev', 'debug_form')
 
+        dbc_user = config.get('captcha', 'dbc_user')
+        dbc_pass = config.get('captcha', 'dbc_password')
+        if dbc_user and dbc_pass:
+            self.captcha_client = SocketClient(dbc_user, dbc_pass)
+        else:
+            self.captcha_client = None
+
         self.visited_websites = self.load_website_log()
 
         obj_list = self.read_csv(f'input/{self.mode}.csv')
@@ -453,7 +484,6 @@ class Bot(SeleniumBot):
         self.name_filled = False
         self.visited_links = []
         self.scraped_emails = []
-
         self.create_driver()
 
 

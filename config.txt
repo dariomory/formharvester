@@ -3,7 +3,10 @@ mode = lawn
 max_google_pages = 2
 skip_ads = False
 
-# Dev settings (disable both)
+[captcha]
+dbc_user =
+dbc_password =
+
 [dev]
 enabled = True
 debug_form = True
