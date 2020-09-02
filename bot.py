@@ -1,4 +1,4 @@
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote_plus
 from selenium import webdriver
 from SeleniumBot import SeleniumBot
 import traceback
@@ -44,8 +44,8 @@ class Bot(SeleniumBot):
 
     def run(self):
         for query in self.google_queries:
-            self.get('https://www.google.com')
-            self.write('input[type=text]', query, css=True, submit=True, clear=True)
+            query = quote_plus(query)
+            self.get(f'https://www.google.com/search?q={query}&filter=0')
             scraped_links = []
             for _ in range(self.max_google_pages):
                 # Scrape links and go to next page

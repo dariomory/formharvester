@@ -2,6 +2,7 @@
 mode = lawn
 max_google_pages = 2
 skip_ads = False
+start_page = 1
 
 [captcha]
 dbc_user =
