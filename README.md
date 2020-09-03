@@ -10,6 +10,15 @@ The CSV that will be used by the bot (e.g. `mode = lawn` will use `lawn.csv`)
 ####`skip_ads`
 The bot will skip any ads on Google Search.
 
+####`start_page`
+The bot will start on the X google page.
+
+####`send_form`
+The bot will send the form inside the website. It can be disabled to save time.
+
+####`generate_email_sources`
+Generate an extra file showing the source URL where the email was extracted.
+
 ####`[captcha]`
 Here you can enter deathbycaptcha credentials to solve captchas automatically.
 

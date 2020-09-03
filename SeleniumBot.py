@@ -333,7 +333,10 @@ class SeleniumBot:
             field.send_keys(text)
 
         if submit:
-            field.send_keys(Keys.ENTER)
+            try:
+                field.send_keys(text)
+            except:
+                self.driver.execute_script(f'arguments[0].value = "{text}"', field)
 
         return field
 

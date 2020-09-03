@@ -1,8 +1,10 @@
 [settings]
 mode = lawn
-max_google_pages = 2
+max_google_pages = 5
 skip_ads = False
-start_page = 1
+start_page = 5
+send_form = False
+generate_email_sources = True
 
 [captcha]
 dbc_user =

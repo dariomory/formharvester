@@ -1,3 +1,4 @@
+import os
 from urllib.parse import urljoin, quote_plus
 from selenium import webdriver
 from SeleniumBot import SeleniumBot
@@ -7,18 +8,23 @@ import re
 import random
 import pandas as pd
 from selenium.webdriver.common.keys import Keys
-import threading
 import configparser
 import csv
 import platform
 from utils import filter_scraped_links, EMAIL_RGX
-from dbc_api_python3.deathbycaptcha import SocketClient, AccessDeniedException
+from dbc_api_python3.deathbycaptcha import SocketClient
+from rich import pretty
+from rich.console import Console
+from rich.progress import track
+
+__VERSION__ = 1.1
 
 
 class Bot(SeleniumBot):
     # CSS
     GOOGLE_LINKS = '.r>a'
     GOOGLE_NEXT = '#pnnext'
+    GOOGLE_PAGE = '[aria-label="Page {}"]'  # format
 
     # xPath
     AD_XPATH = './ancestor::*[contains(@class, "ads")]'  # node
@@ -28,25 +34,87 @@ class Bot(SeleniumBot):
         return text.replace('-', '').lower()
 
     @staticmethod
-    def log_website(url):
+    def load_txt(filename):
+        with open(filename) as f:
+            return [i.strip() for i in f.readlines() if i.strip()]
+
+    def bot_print(self, message, is_input=False):
+        msg = f"[bold red][FormHarvester {__VERSION__}][/bold red] {message}"
+        self.c.print(msg)
+        if is_input:
+            input()
+
+    def load_progress(self):
+        filename = f'data/{self.mode}_progress.txt'
+        if not os.path.exists(filename):
+            open(filename, 'w').close()
+        progress = self.load_txt(filename)
+        return [p.split('|') for p in progress]
+
+    def write_progress(self, url_list):
+        with open(f'data/{self.mode}_progress.txt', 'w') as f:
+            for url in url_list:
+                f.write(url + '|\n')
+
+    def update_progress(self, url, status):
+        progress = self.load_progress()
+        for arr in progress:
+            if arr[0] == url:
+                arr[1] = status
+                break
+        with open(f'data/{self.mode}_progress.txt', 'w') as f:
+            for arr in progress:
+                f.write(f'{arr[0]}|{arr[1]}\n')
+
+    def get_progress(self):
+        """
+        Return urls without progress
+        :return: list
+        """
+        progress = self.load_progress()
+        output = []
+        for arr in progress:
+            if not arr[1]:
+                output.append(arr)
+        return output
+
+    def log_website(self, url):
+        self.visited_websites.append(url)
         with open('data/website_log.txt', 'a') as f:
             f.write(url + '\n')
 
-    @staticmethod
-    def load_website_log():
-        with open('data/website_log.txt') as f:
-            return [i.strip() for i in f.readlines() if i.strip()]
+    def export_emails(self, filename='scraped_emails'):
+        existing_emails = self.load_txt(f'data/{filename}_emails.txt')
 
-    def export_emails(self):
-        with open('data/scraped_emails.txt', 'a') as f:
-            for email in self.scraped_emails:
-                f.write(email + '\n')
+        with open(f'data/{filename}_emails.txt', 'a') as f:
+            for (email, url) in self.scraped_emails:
+                if email not in existing_emails:
+                    f.write(email + '\n')
+
+        if self.generate_email_sources:
+            with open(f'data/{filename}_emails_sources.txt', 'a') as f:
+                for (email, url) in self.scraped_emails:
+                    if email not in existing_emails:
+                        f.write(f'{email} ({url})' + '\n')
 
     def run(self):
+        self.bot_print('Running...')
         for query in self.google_queries:
             query = quote_plus(query)
             self.get(f'https://www.google.com/search?q={query}&filter=0')
             scraped_links = []
+
+            if self.start_page > 1:
+                backup_page = 10
+                while True:
+                    page = self.css(self.GOOGLE_PAGE.format(str(self.start_page)))
+                    if page:
+                        self.click(page)
+                        break
+                    else:
+                        self.click(self.GOOGLE_PAGE.format(str(backup_page)), css=True)
+                        backup_page += 4
+
             for _ in range(self.max_google_pages):
                 # Scrape links and go to next page
                 if self.skip_ads:
@@ -60,31 +128,46 @@ class Bot(SeleniumBot):
                     scraped_links.extend(no_ads)
                 else:
                     scraped_links.extend(self.css(self.GOOGLE_LINKS, attr='href', getall=True))
-                self.click(self.GOOGLE_NEXT, css=True)
+                next_btn = self.css(self.GOOGLE_NEXT, wait=1)
+                if next_btn:
+                    self.click(next_btn)
+                else:
+                    break
             # Process scraped links
             scraped_links = filter_scraped_links(self.keywords, scraped_links)
-            for url in scraped_links:
-                try:
-                    if url in self.visited_websites:
-                        continue
-                    self.process_url(url)
-                except:
-                    e = traceback.format_exc()
-                    bot.log(screenshot=True, error=e)
-                    self.restart_driver()
-                self.export_emails()
-        input()
+            self.write_progress(scraped_links)
+            self.start_process(scraped_links)
+        self.bot_print(f'Done.', is_input=True)
+
+    def resume(self, url_list):
+        self.bot_print('Resuming harvest...')
+        self.start_process(url_list)
+        self.bot_print(f'Done.', is_input=True)
+
+    def start_process(self, url_list):
+        for url in track(url_list, description='Processing...'):
+            try:
+                if url in self.visited_websites:
+                    self.update_progress(url, status='VISITED')
+                    continue
+                self.process_url(url)
+            except:
+                self.update_progress(url, status='ERROR')
+                e = traceback.format_exc()
+                bot.log(screenshot=True, error=e)
+                self.restart_driver()
+            self.export_emails(filename=self.mode)
 
     def scrape_emails(self):
         emails = set(re.findall(EMAIL_RGX, str(self.driver.page_source)))
         emails = [
             i for i in emails if
             not any(
-                x for x in ['unpkg', 'sentry.wixpress.com', 'static.', 'indexOf', '.js', '//'] if x in i
+                x for x in ['/', 'unpkg', 'sentry.wixpress.com', 'static.', 'indexOf', '.js', '//'] if x in i
             )
         ]
         if emails:
-            self.scraped_emails.extend(emails)
+            self.scraped_emails.update([(e, self.driver.current_url) for e in emails])
 
     def wait_get_inputs(self):
         self.wait_show_element('input', wait=3)
@@ -155,6 +238,20 @@ class Bot(SeleniumBot):
                     self.details['phone']
                 )
                 return True
+            elif 'city' in field:
+                element.send_keys(
+                    self.details['city']
+                )
+                return True
+            elif 'state' in field:
+                element.send_keys(
+                    self.details['state']
+                )
+                return True
+            elif bool(re.findall(r'(location|address)', field)):
+                element.send_keys(
+                    self.details['location']
+                )
             elif bool(re.findall(r'(location|address)', field)):
                 element.send_keys(
                     self.details['location']
@@ -288,7 +385,7 @@ class Bot(SeleniumBot):
 
     def process_url(self, url):
         self.name_filled = False
-        self.scraped_emails = []
+        self.scraped_emails = set()
         self.visited_links.clear()
 
         contact_url = urljoin(url, '/contact/')
@@ -312,6 +409,10 @@ class Bot(SeleniumBot):
             inputs = self.wait_get_inputs()
             if not self.css('textarea'):
                 inputs = self.find_contact_page(url)
+
+        if not self.send_form:
+            self.update_progress(url, status='VISITED')
+            return
 
         if inputs:
             # Fill text/email inputs
@@ -375,13 +476,17 @@ class Bot(SeleniumBot):
                         self.submit_button(btn)
 
                 self.log_website(url)
+                self.update_progress(url, status='SUBMITTED')
             elif btn and self.DEBUG:
                 self.highlight(btn)
                 self.log_website(url)
+            else:
+                self.update_progress(url, status='BUTTON_NOT_FOUND')
 
             time.sleep(3)
             return True
         else:
+            self.update_progress(url, status='FORM_NOT_FOUND')
             return False
 
     def create_driver(self):
@@ -450,11 +555,17 @@ class Bot(SeleniumBot):
         self.create_driver()
 
     def __init__(self):
+        pretty.install()
+        self.c = Console()
+
         config = configparser.ConfigParser()
         config.read('config.txt')
         self.mode = config.get('settings', 'mode')
         self.max_google_pages = config.getint('settings', 'max_google_pages')
         self.skip_ads = config.getboolean('settings', 'skip_ads')
+        self.start_page = config.getint('settings', 'start_page')
+        self.send_form = config.getboolean('settings', 'send_form')
+        self.generate_email_sources = config.getboolean('settings', 'generate_email_sources')
 
         self.DEV_SETTINGS = config.getboolean('dev', 'enabled')
         self.DEBUG = config.getboolean('dev', 'debug_form')
@@ -466,7 +577,7 @@ class Bot(SeleniumBot):
         else:
             self.captcha_client = None
 
-        self.visited_websites = self.load_website_log()
+        self.visited_websites = self.load_txt('data/website_log.txt')  # visited urls globally (scraper)
 
         obj_list = self.read_csv(f'input/{self.mode}.csv')
         self.details = {
@@ -475,6 +586,8 @@ class Bot(SeleniumBot):
             'phone': obj_list[0].get('Phone'),
             'email': obj_list[0].get('Email'),
             'location': obj_list[0].get('Location'),
+            'city': obj_list[0].get('City'),
+            'state': obj_list[0].get('State'),
             'subject': obj_list[0].get('Subject'),
             'message': obj_list[0].get('Message'),
         }
@@ -482,11 +595,16 @@ class Bot(SeleniumBot):
         self.keywords = [i.get('Keywords') for i in obj_list if i.get('Keywords')]
 
         self.name_filled = False
-        self.visited_links = []
-        self.scraped_emails = []
+        self.visited_links = []  # visited links within a site
+        self.scraped_emails = set()
         self.create_driver()
 
 
 if __name__ == '__main__':
     bot = Bot()
-    bot.run()
+    remaining_urls = bot.get_progress()
+    if remaining_urls:
+        urls = [i[0] for i in remaining_urls]
+        bot.resume(urls)
+    else:
+        bot.run()

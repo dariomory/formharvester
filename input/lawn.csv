@@ -1,12 +1,12 @@
-﻿Google Queries,Keywords,,First Name,Last Name,Phone,Email,Location,Subject,Message
-Lawn in Denver,lawn,,FirstName,LastName,133333337,unknown@dev.com,My Location,My Subject,"Hello
+﻿Google Queries,Keywords,,First Name,Last Name,Phone,Email,Location,City,State,Subject,Message
+Lawn in Denver,lawn,,FirstName,LastName,133333337,unknown@dev.com,My Location,My City,My State,My Subject,"Hello
 This is a message.
 
 With love, from a Bot."
-Lawn in Austin,green,,,,,,,,
-,mow,,,,,,,,
-,grass,,,,,,,,
-,turf,,,,,,,,
-,yard,,,,,,,,
-,landscaping,,,,,,,,
-,landscape,,,,,,,,
+Lawn in Austin,green,,,,,,,,,,
+,mow,,,,,,,,,,
+,grass,,,,,,,,,,
+,turf,,,,,,,,,,
+,yard,,,,,,,,,,
+,landscaping,,,,,,,,,,
+,landscape,,,,,,,,,,
