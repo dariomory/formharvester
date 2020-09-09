@@ -13,7 +13,6 @@ def filter_scraped_links(keywords, url_list):
                 break
     return list(output)
 
-
 def get_root_url(url):
     x = tldextract.extract(url)
     if x.subdomain:

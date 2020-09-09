@@ -8,16 +8,28 @@ The CSV that will be used by the bot (e.g. `mode = lawn` will use `lawn.csv`)
 The CSV that will be used by the bot (e.g. `mode = lawn` will use `lawn.csv`)
 
 ####`skip_ads`
-The bot will skip any ads on Google Search.
+FormHarvester will skip any ads on Google Search.
 
 ####`start_page`
-The bot will start on the X google page.
+FormHarvester will start on X google page.
 
 ####`send_form`
-The bot will send the form inside the website. It can be disabled to save time.
+FormHarvester will send the form inside the website. It can be disabled to save time.
 
 ####`generate_email_sources`
 Generate an extra file showing the source URL where the email was extracted.
+
+####`hide_browser`
+This setting will run the browser in headless mode and it will be hidden.
+
+####`max_time`
+Max time FormHarvester can spend on a single website.
+
+####`min_delay` and `max_delay`
+A random delay between `min` and `max` will be used for google.
+
+####`captcha_sleep`
+Sleep for X minutes after a Google captcha is found. 0 to disable.
 
 ####`[captcha]`
 Here you can enter deathbycaptcha credentials to solve captchas automatically.

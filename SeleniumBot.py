@@ -17,6 +17,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait, Select
+import html
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
@@ -57,7 +58,19 @@ class SeleniumBot:
 
     NUM_MOUSE_MOVES = 10
 
-    def get(self, page, pre_sleep=0, sleep=0, timeout=False):
+    crawl = True
+
+    def get(self, page, pre_sleep=0, sleep=0, timeout=False, check=False):
+
+        if not self.crawl:
+            return
+
+        if check:
+            try:
+                requests.get(page, timeout=8)
+            except:
+                return
+
         if timeout:
             self.driver.set_page_load_timeout(timeout)
 
@@ -84,7 +97,10 @@ class SeleniumBot:
     def close(self):
         if self.COOKIES_PROFILE:
             self.save_cookies()
-        self.driver.quit()
+        try:
+            self.driver.quit()
+        except:
+            pass
 
     def script(self, script, *args):
         return self.driver.execute_script(script, *args)
@@ -525,7 +541,6 @@ class SeleniumBot:
             # Captcha 3
             src = self.css('.grecaptcha-logo>iframe', attr='src')
             if src:
-                import html
                 src = html.unescape(src)
                 site_key = parse_qs(urlparse(src).query)['k'][0]
                 return site_key
@@ -600,3 +615,17 @@ class SeleniumBot:
             r = requests.get(url)
             for chunk in r.iter_content(1024):
                 f.write(chunk)
+
+    def random_sleep(self, *args, **kwargs):
+
+        if kwargs.get('long'):
+            time.sleep(random.uniform(self.MIN_RAND_LONG, self.MAX_RAND_LONG))
+
+        elif len(args) == 1:
+            time.sleep(random.uniform(1, args[0]))
+
+        elif len(args) == 2:
+            time.sleep(random.uniform(args[0], args[1]))
+
+        else:
+            time.sleep(random.uniform(self.MIN_RAND, self.MAX_RAND))

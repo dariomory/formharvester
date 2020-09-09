@@ -1,10 +1,17 @@
 [settings]
 mode = lawn
-max_google_pages = 5
 skip_ads = False
-start_page = 5
 send_form = False
+max_time = 10
 generate_email_sources = True
+hide_browser = False
+
+[google]
+start_page = 5
+min_delay = 3
+max_delay = 10
+captcha_sleep = 60
+max_google_pages = 20
 
 [captcha]
 dbc_user =
