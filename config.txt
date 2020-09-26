@@ -10,8 +10,10 @@ hide_browser = False
 start_page = 5
 min_delay = 3
 max_delay = 10
-captcha_sleep = 60
 max_google_pages = 20
+# time in minutes
+captcha_sleep = 60
+search_timer = 1
 
 [captcha]
 dbc_user =

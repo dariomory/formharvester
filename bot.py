@@ -1,5 +1,8 @@
+import json
 import os
 import threading
+from collections import defaultdict
+from datetime import datetime, timedelta
 from urllib.parse import urljoin, quote_plus
 from selenium import webdriver
 from SeleniumBot import SeleniumBot
@@ -17,7 +20,45 @@ from dbc_api_python3.deathbycaptcha import SocketClient
 from rich import pretty
 from rich.console import Console
 
-__VERSION__ = '1.3.3'
+__VERSION__ = '2.0'
+__FIGLET__ = r'''
+           @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+           @@@@@@@@@@@@@@@@@800GGGGGGGG00088@@@@@@@@@@@@@@@@@
+           @@@@@@@@@@@@@@0GG00888@@@@@@8880GGG8@@@@@@@@@@@@@@
+           @@@@@@@@@@@@0C08@@@@@@@@@@@@@@@@@@0CC@@@@@@@@@@@@@
+           @@@@@@@@@@@0C8@@@@@@@@@@@@@@@@@@@@@@0L8@@@@@@@@@@@
+           @@@@@@@@@@8L8@@@@@@@@@@@@@@@@@@@@@@@@0L8@@@@@@@@@@
+           @@@@@@@@@@GG@@@@@@@@@@@@@@@@@@@@@@@@@@GC@@@@@@@@@@
+           @@@@@@@@@0fLGGGGGGGGGGGGGGGGGGGGGGGGGGCt0@@@@@@@@@
+           @@@@@@@@@t,,:,,,,,,,,,::::::,,,,,,,,,,:.t@@@@@@@@@
+           @@@@@@@8CCtCi:,,,,,,:iG000001:,,,,,,,;GtCC8@@@@@@@
+           @@@@@@@i,0CG:     .:1C88@@88C1:.     ,0f8i1@@@@@@@
+           @@@@@@@i,0LCG;::itfL0@@@@@@@@0Cfti::;C8f8;i@@@@@@@
+           @@@@@@@0fGfLG800GC0@@@@@@@@@@@@0CG008GGtGf0@@@@@@@
+           @@@@@@@@0L1G0GGG0@@@@80CGGfL0@@@@8GGG08tLC@@@@@@@@
+           @@@@@@@CL00f8@@@@@@0fL:.GC :GtC@@@@@@8CGGLL8@@@@@@
+           @@@@@@LCCC0GLC08@8Li:LttCCi1G;,L8@@8GCGGLLCL@@@@@@
+           @@@@@8f@0fLG0LffCtL08@@@@@@@8GCLtCLfC0GGGG@f8@@@@@
+           @@@@@8f8@GCCG0888GG@@@80GG00@@@CC8880GCCG@@f8@@@@@
+           @@@@@@GL8CG8@@@@@@0C8C0C;:f0C8CG@@@@@@@0CGGC@@@@@@
+           @@@@@@@0fC@@@@800G0CfGG;  ,fGLf00G008@@@@fG@@@@@@@
+           @@@@@@@@Gf@@8G8L;:iG8G:    .180C;,;CC8@@8t8@@@@@@@
+           @@@@@@@@@LL80L8L;:188f      ,00G;:;GL8@0fG@@@@@@@@
+           @@@@@@@@@@GLCLLCLLLLLfti,,:ttGGGGGGCGGCC0@@@@@@@@@
+           @@@@@@@@@@@@0GCCCCCG0@@@888@@80GGCCGG08@@@@@@@@@@@
+           @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  _____                    _   _                           _
+ |  ___|__  _ __ _ __ ___ | | | | __ _ _ ____   _____  ___| |_ ___ _ __
+ | |_ / _ \| '__| '_ ` _ \| |_| |/ _` | '__\ \ / / _ \/ __| __/ _ \ '__|
+ |  _| (_) | |  | | | | | |  _  | (_| | |   \ V /  __/\__ \ ||  __/ |
+ |_|  \___/|_|  |_| |_| |_|_| |_|\__,_|_|    \_/ \___||___/\__\___|_|
+                               ____    ___
+                              |___ \  / _ \
+                                __) || | | |
+                               / __/ | |_| |
+                              |_____(_)___/
+
+'''
 
 
 class Bot(SeleniumBot):
@@ -46,17 +87,20 @@ class Bot(SeleniumBot):
         start = time.time()
         while True:
             elapsed = time.time() - start
-            self.bot_print(round(elapsed, 2))
+            self.bot_print(f'[Page Timer] {round(elapsed, 2)}')
             if elapsed >= self.max_time:
                 self.crawl = False
                 return
             time.sleep(.1)
 
-    def bot_print(self, message, is_input=False):
-        msg = f"[bold red][FormHarvester {__VERSION__}][/bold red] {message}"
-        self.c.print(msg)
-        if is_input:
-            input()
+    def bot_print(self, message, is_input=False, figlet=False):
+        if figlet:
+            self.c.print(__FIGLET__, style='#00eeff')
+        else:
+            msg = f"[bold red][FormHarvester {__VERSION__}][/bold red] {message}"
+            self.c.print(msg)
+            if is_input:
+                input()
 
     def get_progress_file(self, google):
         if google:
@@ -118,6 +162,15 @@ class Bot(SeleniumBot):
         terms = [i[0] for i in progress]
         return [i for i in term_list if i not in terms]
 
+    def log_remaining_pages(self):
+        with open('remaining_google_pages.json', 'w') as f:
+            json.dump(self.remaining_pages_log, f)
+
+    def get_remaining_pages(self):
+        if os.path.exists('remaining_google_pages.json'):
+            with open('remaining_google_pages.json') as f:
+                self.remaining_pages_log = json.load(f)
+
     def get_no_progress(self, is_google=False):
         """
         Return urls with no progress
@@ -167,6 +220,7 @@ class Bot(SeleniumBot):
             if scraped_links:
                 self.start_process_url(scraped_links)
 
+        self.driver.quit()
         self.bot_print(f'Done!', is_input=True)
 
     def resume(self, url_list, google_list):
@@ -209,6 +263,12 @@ class Bot(SeleniumBot):
             # Re-enable crawl
             self.crawl = True
 
+    def google_timer_thread(self):
+        end_time = datetime.now() + timedelta(minutes=self.GOOGLE_TIMER)
+        while datetime.now() < end_time:
+            self.bot_print(f'[Google Timer] {datetime.now()} -> {end_time}')
+            time.sleep(1)
+
     def google_popup_check(self):
         iframe = self.css('iframe[src*="consent"]', wait=3)
         if iframe:
@@ -218,49 +278,57 @@ class Bot(SeleniumBot):
                 self.click(btns[1])
         self.driver.switch_to.default_content()
 
-    def start_process_google(self, google_list):
-
-        google_term = google_list.pop(0)
-        self.bot_print(google_term)
-
-        query = quote_plus(google_term)
-        time.sleep(3)
-        self.get(f'https://www.google.com/search?q={query}&filter=0')
-
+    def check_google_captcha(self):
+        self.bot_print('Checking Google captcha...')
         while True:
-            exists = self.check_captcha()
-            if exists:
+            search_exists = self.css('input[type="text"]')
+            if search_exists:
+                return
+            else:
                 if self.CAPTCHA_SLEEP:
+                    self.bot_print(f'Captcha found! Sleeping for {self.CAPTCHA_SLEEP} minutes.')
                     self.driver.quit()
-                    self.bot_print(f'Captcha found! Sleeping for {self.CAPTCHA_SLEEP // 60} minutes.')
-                    time.sleep(self.CAPTCHA_SLEEP)
+                    time_in_seconds = int(self.CAPTCHA_SLEEP * 60)
+                    time.sleep(time_in_seconds)
                     self.create_driver()
-                    self.get(f'https://www.google.com/search?q={query}&filter=0')
+                    self.wait_google_timer()
+                    self.get(f'https://www.google.com/search?q={self.google_query}&filter=0')
+                    if self.current_page:
+                        self.start_at_x_page(self.current_page)
                 else:
                     self.bot_print('Please solve the captcha to continue.', is_input=True)
-                    break
-            else:
-                break
+                    return
 
-        self.google_popup_check()
+    def wait_google_timer(self):
+        if self.google_timer:
+            self.bot_print('Waiting for last Google search...')
+            self.google_timer.join()
+            self.google_timer = None
+
+    def start_at_x_page(self, page_n):
+        if page_n == 1:
+            return
+
+        last_page = 10
+        while True:
+            page = self.css(self.GOOGLE_PAGE.format(str(page_n)))
+            if page:
+                self.click(page)
+                self.random_sleep(self.MIN_DELAY, self.MAX_DELAY)
+                break
+            else:
+                self.click(self.GOOGLE_PAGE.format(str(last_page)), css=True)
+                self.random_sleep(self.MIN_DELAY, self.MAX_DELAY)
+                last_page += 4
+
+    def scrape_google(self, start_page, page_count):
 
         scraped_links = []
-
-        # Start at X page
-        if self.start_page > 1:
-            backup_page = 10
-            while True:
-                page = self.css(self.GOOGLE_PAGE.format(str(self.start_page)))
-                if page:
-                    self.click(page)
-                    self.random_sleep(self.MIN_DELAY, self.MAX_DELAY)
-                    break
-                else:
-                    self.click(self.GOOGLE_PAGE.format(str(backup_page)), css=True)
-                    self.random_sleep(self.MIN_DELAY, self.MAX_DELAY)
-                    backup_page += 4
-
-        for _ in range(self.max_google_pages):
+        self.remaining_pages_log[self.google_term] = list(range(start_page, page_count))
+        self.log_remaining_pages()
+        self.start_at_x_page(start_page)
+        for page in range(start_page, page_count):
+            self.current_page = page
             # Scrape links and go to next page
             if self.skip_ads:
                 no_ads = []
@@ -273,12 +341,44 @@ class Bot(SeleniumBot):
                 scraped_links.extend(no_ads)
             else:
                 scraped_links.extend(self.css(self.GOOGLE_LINKS, attr='href', getall=True))
+
+            self.remaining_pages_log[self.google_term].remove(page)
+            self.log_remaining_pages()
+
             next_btn = self.css(self.GOOGLE_NEXT, wait=1)
             if next_btn:
                 self.click(next_btn)
                 self.random_sleep(self.MIN_DELAY, self.MAX_DELAY)
+                self.check_google_captcha()
             else:
                 break
+
+        self.google_timer = threading.Thread(
+            target=self.google_timer_thread,
+        )
+        self.google_timer.start()
+        return scraped_links
+
+    def start_process_google(self, google_list):
+        self.wait_google_timer()
+
+        self.google_term = google_list.pop(0)
+        self.bot_print(self.google_term)
+
+        self.google_query = quote_plus(self.google_term)
+        time.sleep(3)
+        self.get(f'https://www.google.com/search?q={self.google_query}&filter=0')
+
+        self.check_google_captcha()
+        self.google_popup_check()
+
+        scraped_links = None
+
+        remaining_pages = self.remaining_pages_log.get(self.google_term)
+        if remaining_pages:
+            scraped_links = self.scrape_google(remaining_pages[0], len(remaining_pages))
+        else:
+            self.scrape_google(self.start_page, self.max_google_pages)
 
         if not scraped_links:
             return None
@@ -291,7 +391,7 @@ class Bot(SeleniumBot):
         scraped_links = [i for i in scraped_links if i not in website_log]  # filter by global log
 
         self.write_progress(scraped_links, google=False)
-        self.update_progress(google_term, 'DONE', google=True)
+        self.update_progress(self.google_term, 'DONE', google=True)
 
         return scraped_links
 
@@ -435,7 +535,6 @@ class Bot(SeleniumBot):
         contact_links.extend(
             self.css('a[href*="contact"]', getall=True)
         )
-        print(contact_links)
         if not contact_links:
             return []
 
@@ -718,6 +817,7 @@ class Bot(SeleniumBot):
     def __init__(self):
         pretty.install()
         self.c = Console()
+        self.bot_print(__FIGLET__, figlet=True)
 
         config = configparser.ConfigParser()
         config.read('config.txt')
@@ -735,7 +835,8 @@ class Bot(SeleniumBot):
         self.max_google_pages = config.getint('google', 'max_google_pages')
         self.MIN_DELAY = config.getint('google', 'min_delay')
         self.MAX_DELAY = config.getint('google', 'max_delay')
-        self.CAPTCHA_SLEEP = config.getint('google', 'captcha_sleep') * 60
+        self.CAPTCHA_SLEEP = config.getint('google', 'captcha_sleep')
+        self.GOOGLE_TIMER = config.getint('google', 'search_timer')
 
         dbc_user = config.get('captcha', 'dbc_user')
         dbc_pass = config.get('captcha', 'dbc_password')
@@ -768,6 +869,12 @@ class Bot(SeleniumBot):
 
         self.crawl = True  # stop current page crawl
         self.threads = []
+        self.google_term = None
+        self.google_query = None
+        self.google_timer = None
+        self.current_page = None
+        self.remaining_pages_log = defaultdict(list)
+        self.get_remaining_pages()
 
         self.create_driver()
 
@@ -783,7 +890,7 @@ if __name__ == '__main__':
                 googles = [i[0] for i in remaining_google]
                 bot.resume(urls, googles)
             else:
-                bot.bot_print('Done.')
+                bot.bot_print('Done!', is_input=True)
         except Exception as e:
             bot.close()
             print(e)
