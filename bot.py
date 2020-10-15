@@ -20,7 +20,7 @@ from dbc_api_python3.deathbycaptcha import SocketClient
 from rich import pretty
 from rich.console import Console
 
-__VERSION__ = '2.0'
+__VERSION__ = '2.1'
 __FIGLET__ = r'''
            @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
            @@@@@@@@@@@@@@@@@800GGGGGGGG00088@@@@@@@@@@@@@@@@@
@@ -52,11 +52,11 @@ __FIGLET__ = r'''
  | |_ / _ \| '__| '_ ` _ \| |_| |/ _` | '__\ \ / / _ \/ __| __/ _ \ '__|
  |  _| (_) | |  | | | | | |  _  | (_| | |   \ V /  __/\__ \ ||  __/ |
  |_|  \___/|_|  |_| |_| |_|_| |_|\__,_|_|    \_/ \___||___/\__\___|_|
-                               ____    ___
-                              |___ \  / _ \
-                                __) || | | |
-                               / __/ | |_| |
-                              |_____(_)___/
+                                ____    _
+                               |___ \  / |
+                                 __) | | |
+                                / __/ _| |
+                               |_____(_)_| 
 
 '''
 
@@ -91,7 +91,7 @@ class Bot(SeleniumBot):
             if elapsed >= self.max_time:
                 self.crawl = False
                 return
-            time.sleep(.1)
+            time.sleep(1)
 
     def bot_print(self, message, is_input=False, figlet=False):
         if figlet:
@@ -302,6 +302,7 @@ class Bot(SeleniumBot):
     def wait_google_timer(self):
         if self.google_timer:
             self.bot_print('Waiting for last Google search...')
+            self.get('https://onlineclock.net/')
             self.google_timer.join()
             self.google_timer = None
 
@@ -324,10 +325,11 @@ class Bot(SeleniumBot):
     def scrape_google(self, start_page, page_count):
 
         scraped_links = []
-        self.remaining_pages_log[self.google_term] = list(range(start_page, page_count))
+        self.remaining_pages_log[self.google_term] = list(range(start_page, start_page + page_count))
         self.log_remaining_pages()
         self.start_at_x_page(start_page)
-        for page in range(start_page, page_count):
+        remaining_pages = list(self.remaining_pages_log[self.google_term])
+        for page in remaining_pages:
             self.current_page = page
             # Scrape links and go to next page
             if self.skip_ads:
@@ -344,6 +346,8 @@ class Bot(SeleniumBot):
 
             self.remaining_pages_log[self.google_term].remove(page)
             self.log_remaining_pages()
+            sl = self.filter_links(scraped_links)
+            self.write_progress(sl, google=False)
 
             next_btn = self.css(self.GOOGLE_NEXT, wait=1)
             if next_btn:
@@ -372,27 +376,28 @@ class Bot(SeleniumBot):
         self.check_google_captcha()
         self.google_popup_check()
 
-        scraped_links = None
-
         remaining_pages = self.remaining_pages_log.get(self.google_term)
         if remaining_pages:
             scraped_links = self.scrape_google(remaining_pages[0], len(remaining_pages))
         else:
-            self.scrape_google(self.start_page, self.max_google_pages)
+            scraped_links = self.scrape_google(self.start_page, self.max_google_pages)
 
         if not scraped_links:
             return None
 
+        scraped_links = self.filter_links(scraped_links)
+        self.write_progress(scraped_links, google=False)
+        self.update_progress(self.google_term, 'DONE', google=True)
+
+        return scraped_links
+
+    def filter_links(self, scraped_links):
         scraped_links = [get_root_url(i) for i in scraped_links]  # map by root url
         scraped_links = list(set(scraped_links))  # duplicate filter
         scraped_links = filter_scraped_links(self.keywords, scraped_links)  # keyword filter
 
         website_log = self.get_website_log()
         scraped_links = [i for i in scraped_links if i not in website_log]  # filter by global log
-
-        self.write_progress(scraped_links, google=False)
-        self.update_progress(self.google_term, 'DONE', google=True)
-
         return scraped_links
 
     def scrape_emails(self):

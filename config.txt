@@ -7,13 +7,13 @@ generate_email_sources = True
 hide_browser = False
 
 [google]
-start_page = 5
+start_page = 3
 min_delay = 3
 max_delay = 10
-max_google_pages = 20
+max_google_pages = 1
 # time in minutes
 captcha_sleep = 60
-search_timer = 1
+search_timer = 2
 
 [captcha]
 dbc_user =

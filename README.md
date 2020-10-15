@@ -29,7 +29,10 @@ Max time FormHarvester can spend on a single website.
 A random delay between `min` and `max` will be used for google.
 
 #### `captcha_sleep`
-Sleep for X minutes after a Google captcha is found. 0 to disable.
+Sleep for `X` minutes after a Google captcha is found. 0 to disable.
+
+#### `search_timer`
+A waiting time (in minutes) between the last google search and the next one.
 
 #### `[captcha]`
 Here you can enter deathbycaptcha credentials to solve captchas automatically.
