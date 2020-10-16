@@ -1,19 +1,19 @@
 [settings]
-mode = lawn
+mode = roofing
 skip_ads = False
 send_form = False
-max_time = 10
+max_time = 30
 generate_email_sources = True
 hide_browser = False
 
 [google]
-start_page = 3
-min_delay = 3
-max_delay = 10
-max_google_pages = 1
+start_page = 1
+min_delay = 8
+max_delay = 25
+max_google_pages = 3
 # time in minutes
 captcha_sleep = 60
-search_timer = 2
+search_timer = 20
 
 [captcha]
 dbc_user =

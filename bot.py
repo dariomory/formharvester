@@ -20,7 +20,7 @@ from dbc_api_python3.deathbycaptcha import SocketClient
 from rich import pretty
 from rich.console import Console
 
-__VERSION__ = '2.1'
+__VERSION__ = '2.2'
 __FIGLET__ = r'''
            @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
            @@@@@@@@@@@@@@@@@800GGGGGGGG00088@@@@@@@@@@@@@@@@@
@@ -52,18 +52,17 @@ __FIGLET__ = r'''
  | |_ / _ \| '__| '_ ` _ \| |_| |/ _` | '__\ \ / / _ \/ __| __/ _ \ '__|
  |  _| (_) | |  | | | | | |  _  | (_| | |   \ V /  __/\__ \ ||  __/ |
  |_|  \___/|_|  |_| |_| |_|_| |_|\__,_|_|    \_/ \___||___/\__\___|_|
-                                ____    _
-                               |___ \  / |
-                                 __) | | |
-                                / __/ _| |
-                               |_____(_)_| 
-
+                              ____    ____
+                             |___ \  |___ \
+                               __) |   __) |
+                              / __/ _ / __/
+                             |_____(_)_____|
 '''
 
 
 class Bot(SeleniumBot):
     # CSS
-    GOOGLE_LINKS = '.r>a'
+    GOOGLE_LINKS = '#search div.rc>div>a'
     GOOGLE_NEXT = '#pnnext'
     GOOGLE_PAGE = '[aria-label="Page {}"]'  # format
 
@@ -385,10 +384,7 @@ class Bot(SeleniumBot):
         if not scraped_links:
             return None
 
-        scraped_links = self.filter_links(scraped_links)
-        self.write_progress(scraped_links, google=False)
         self.update_progress(self.google_term, 'DONE', google=True)
-
         return scraped_links
 
     def filter_links(self, scraped_links):
@@ -882,6 +878,7 @@ class Bot(SeleniumBot):
         self.get_remaining_pages()
 
         self.create_driver()
+
 
 
 if __name__ == '__main__':
