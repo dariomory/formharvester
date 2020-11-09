@@ -243,6 +243,7 @@ class Bot(SeleniumBot):
         for url in url_list:
             self.crawl = True
             try:
+                # TODO check if visited is rooted
                 if url in self.visited_websites:
                     self.update_progress(url, status='VISITED', google=False)
                     continue
@@ -878,7 +879,6 @@ class Bot(SeleniumBot):
         self.get_remaining_pages()
 
         self.create_driver()
-
 
 
 if __name__ == '__main__':
