@@ -243,7 +243,6 @@ class Bot(SeleniumBot):
         for url in url_list:
             self.crawl = True
             try:
-                # TODO check if visited is rooted
                 if url in self.visited_websites:
                     self.update_progress(url, status='VISITED', google=False)
                     continue
@@ -346,8 +345,8 @@ class Bot(SeleniumBot):
 
             self.remaining_pages_log[self.google_term].remove(page)
             self.log_remaining_pages()
-            sl = self.filter_links(scraped_links)
-            self.write_progress(sl, google=False)
+            scraped_links = self.filter_links(scraped_links)
+            self.write_progress(scraped_links, google=False)
 
             next_btn = self.css(self.GOOGLE_NEXT, wait=1)
             if next_btn:
@@ -392,7 +391,6 @@ class Bot(SeleniumBot):
         scraped_links = [get_root_url(i) for i in scraped_links]  # map by root url
         scraped_links = list(set(scraped_links))  # duplicate filter
         scraped_links = filter_scraped_links(self.keywords, scraped_links)  # keyword filter
-
         website_log = self.get_website_log()
         scraped_links = [i for i in scraped_links if i not in website_log]  # filter by global log
         return scraped_links
