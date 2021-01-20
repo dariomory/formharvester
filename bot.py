@@ -19,8 +19,9 @@ from utils import filter_scraped_links, EMAIL_RGX, get_root_url
 from dbc_api_python3.deathbycaptcha import SocketClient
 from rich import pretty
 from rich.console import Console
+import chromedriver_autoinstaller
 
-__VERSION__ = '2.2'
+__VERSION__ = '2.2.2'
 __FIGLET__ = r'''
            @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
            @@@@@@@@@@@@@@@@@800GGGGGGGG00088@@@@@@@@@@@@@@@@@
@@ -52,17 +53,17 @@ __FIGLET__ = r'''
  | |_ / _ \| '__| '_ ` _ \| |_| |/ _` | '__\ \ / / _ \/ __| __/ _ \ '__|
  |  _| (_) | |  | | | | | |  _  | (_| | |   \ V /  __/\__ \ ||  __/ |
  |_|  \___/|_|  |_| |_| |_|_| |_|\__,_|_|    \_/ \___||___/\__\___|_|
-                              ____    ____
-                             |___ \  |___ \
-                               __) |   __) |
-                              / __/ _ / __/
-                             |_____(_)_____|
+ 
+                          ░▀▀▄░░░░▀▀▄░░░░▀▀▄
+                          ░▄▀░░░░░▄▀░░░░░▄▀░
+                          ░▀▀▀░▀░░▀▀▀░▀░░▀▀▀
 '''
 
 
 class Bot(SeleniumBot):
     # CSS
-    GOOGLE_LINKS = '#search div.rc>div>a'
+    GOOGLE_LINKS = '//*[@id="search"]//a[@data-ved and contains(@href, "http")]'  # xpath
+    GOOGLE_LINKS_ADS = '//*[@id="search"]//a[@data-ved and contains(@href, "http")] | //a[@data-pcu]'  # xpath
     GOOGLE_NEXT = '#pnnext'
     GOOGLE_PAGE = '[aria-label="Page {}"]'  # format
 
@@ -332,16 +333,13 @@ class Bot(SeleniumBot):
             self.current_page = page
             # Scrape links and go to next page
             if self.skip_ads:
-                no_ads = []
-                els = self.css(self.GOOGLE_LINKS, getall=True)
-                for el in els:
-                    if self.xpath(self.AD_XPATH, node=el):
-                        continue
-                    else:
-                        no_ads.append(el.get_attribute('href'))
-                scraped_links.extend(no_ads)
+                scraped_links.extend(
+                    self.xpath(self.GOOGLE_LINKS, getall=True, attr='href')
+                )
             else:
-                scraped_links.extend(self.css(self.GOOGLE_LINKS, attr='href', getall=True))
+                scraped_links.extend(
+                    self.xpath(self.GOOGLE_LINKS_ADS, getall=True, attr='href')
+                )
 
             self.remaining_pages_log[self.google_term].remove(page)
             self.log_remaining_pages()
@@ -778,18 +776,7 @@ class Bot(SeleniumBot):
                                                 "enable-logging"  # Disable logging
                                                 ])
 
-        # Multi-platform support
-        if platform.system() == 'Windows':
-            exe_path = 'drivers/chromedriver.exe'
-        elif platform.system() == 'Darwin':
-            exe_path = 'drivers/mac_chromedriver'
-        elif platform.system() == 'Linux':
-            exe_path = 'drivers/linux_chromedriver'
-        else:
-            exe_path = None
-
-        self.driver = webdriver.Chrome(executable_path=exe_path,
-                                       options=chrome_options)
+        self.driver = webdriver.Chrome(options=chrome_options)
 
         self.driver.maximize_window()
 
@@ -818,6 +805,9 @@ class Bot(SeleniumBot):
         pretty.install()
         self.c = Console()
         self.bot_print(__FIGLET__, figlet=True)
+
+        self.bot_print('Checking/updating chromedriver...')
+        chromedriver_autoinstaller.install(cwd=True)
 
         config = configparser.ConfigParser()
         config.read('config.txt')
