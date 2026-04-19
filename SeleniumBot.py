@@ -167,7 +167,7 @@ class SeleniumBot:
 
     def contains_text(self, text):
         try:
-            return self.driver.find_element_by_xpath(f'//*[contains(text(), "{text}")]')
+            return self.driver.find_element(By.XPATH, f'//*[contains(text(), "{text}")]')
         except NoSuchElementException:
             return None
 
@@ -248,7 +248,7 @@ class SeleniumBot:
 
     def element_is_present(self, selector):
         try:
-            self.driver.find_element_by_css_selector(selector)
+            self.driver.find_element(By.CSS_SELECTOR, selector)
             return True
         except NoSuchElementException:
             return False
@@ -260,18 +260,18 @@ class SeleniumBot:
     def get_element_from(self, fromObject, selector, xpath=False):
         try:
             if xpath:
-                return fromObject.find_element_by_xpath(selector)
+                return fromObject.find_element(By.XPATH, selector)
             else:
-                return fromObject.find_element_by_css_selector(selector)
+                return fromObject.find_element(By.CSS_SELECTOR, selector)
         except NoSuchElementException:
             return None
 
     def get_elements_from(self, fromObject, selector, xpath=False):
         try:
             if xpath:
-                return fromObject.find_elements_by_xpath(selector)
+                return fromObject.find_elements(By.XPATH, selector)
             else:
-                return fromObject.find_elements_by_css_selector(selector)
+                return fromObject.find_elements(By.CSS_SELECTOR, selector)
         except NoSuchElementException:
             return []
 
@@ -304,13 +304,13 @@ class SeleniumBot:
         if levels > 1:
             for i in range(1, levels):
                 path = path + '/..'
-        return node.find_element_by_xpath(path)
+        return node.find_element(By.XPATH, path)
 
     def get_parent_node(self, node):
-        return node.find_element_by_xpath('..')
+        return node.find_element(By.XPATH, '..')
 
     def get_child_nodes(self, node):
-        return node.find_elements_by_xpath('./*')
+        return node.find_elements(By.XPATH, './*')
 
     def write(self, field, text,
               css=False,
@@ -330,7 +330,7 @@ class SeleniumBot:
         elif xpath:
             field = self.xpath(field)
         elif name:
-            field = self.driver.find_element_by_name(field)
+            field = self.driver.find_element(By.NAME, field)
 
         if clear:
             if human:
@@ -437,9 +437,9 @@ class SeleniumBot:
 
     def select_dropdown(self, value, xpath=False):
         if xpath:
-            elem = Select(self.driver.find_element_by_xpath(value))
+            elem = Select(self.driver.find_element(By.XPATH, value))
         else:
-            elem = Select(self.driver.find_element_by_css_selector(value))
+            elem = Select(self.driver.find_element(By.CSS_SELECTOR, value))
         return elem
 
     def get_selected_option(self, selector):
