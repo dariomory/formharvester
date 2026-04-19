@@ -19,7 +19,6 @@ from utils import filter_scraped_links, EMAIL_RGX, get_root_url
 from dbc_api_python3.deathbycaptcha import SocketClient
 from rich import pretty
 from rich.console import Console
-import chromedriver_autoinstaller
 
 __VERSION__ = '2.2.2'
 __FIGLET__ = r'''
@@ -805,9 +804,6 @@ class Bot(SeleniumBot):
         pretty.install()
         self.c = Console()
         self.bot_print(__FIGLET__, figlet=True)
-
-        self.bot_print('Checking/updating chromedriver...')
-        chromedriver_autoinstaller.install(cwd=True)
 
         config = configparser.ConfigParser()
         config.read('config.txt')
