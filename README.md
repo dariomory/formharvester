@@ -1,5 +1,8 @@
 ![formharvester](docs/logo.jpeg)
 
+FormHarvester is an AI-assisted form intelligence engine.
+It navigates the open web autonomously - executing searches, parsing page structure, extracting contact signals, and interacting with forms at the browser level. Built on async browser with stealth fingerprinting, proxy rotation, and a pluggable captcha solver interface.
+
 ## Adjusting config.txt
 
 #### `mode`
@@ -65,4 +68,6 @@ Input CSV files go here.
 #### log
 This folder will report errors on websites, very useful to improve the bot.
 
+___
 
+This project is released under the MIT License. You are free to use, modify, and distribute this software, provided that the original copyright notice and license terms are included in all copies or substantial portions of the software.
