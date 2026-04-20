@@ -1,3 +1,4 @@
+![formharvester](docs/logo.jpeg)
 
 ## Adjusting config.txt
 
