@@ -70,4 +70,4 @@ This folder will report errors on websites, very useful to improve the bot.
 
 ___
 
-This project is released under the MIT License. You are free to use, modify, and distribute this software, provided that the original copyright notice and license terms are included in all copies or substantial portions of the software.
+This project is released under the [MIT License](LICENSE). You are free to use, modify, and distribute this software, provided that the original copyright notice and license terms are included in all copies or substantial portions of the software.
